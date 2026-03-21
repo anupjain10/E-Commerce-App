@@ -1,0 +1,17 @@
+# Environments (Your passwords/keys)
+.env
+backend/.env
+frontend/.env
+
+# Dependencies (Too large to upload)
+node_modules/
+venv/
+backend/__pycache__/
+*.pyc
+
+# Build files (Auto-generated)
+frontend/dist/
+frontend/build/
+
+.DS_Store
+Thumbs.db
