@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { registerValidation } from "../utilis/Validation";
 import { toast } from "react-toastify";
-import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const Register = () => {
-  
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     contact: "",
@@ -15,9 +18,7 @@ const Register = () => {
     confirm_password: "",
   });
 
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const navigate = useNavigate();
 
   // function for set formdata
   const handleChange = (e) => {
@@ -33,18 +34,10 @@ const Register = () => {
     }));
   };
 
-  // get CSRF token
-  const getCSRFToken = () => {
-    return document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("csrftoken="))
-      ?.split("=")[1];
-  };
-
-  const API_URL = import.meta.env.VITE_API_URL 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    setErrors({});
 
     // validate form so that user must enter correct data
     const validationErrors = registerValidation(formData);
@@ -54,53 +47,23 @@ const Register = () => {
       return;
     }
 
-    try {
-      setLoading(true);
-      setErrors({});
+    setLoading(true);
 
-      //  Get CSRF cookie
-      await axios.get("http://localhost:8000/api/accounts/csrf_cookie/", {
-        withCredentials: true,
-      });
+    const response = await register(formData);
+    console.log("Response:", response);
 
-      const csrfToken = getCSRFToken();
-      if (!csrfToken) throw new Error("CSRF token missing");
-
-      // POST request
-      const response = await axios.post(
-        "http://localhost:8000/api/accounts/register/",
-        formData,
-        {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken,
-          },
-        },
-      );
-
-      console.log("Data", response.data);
-      console.log("Response", response);
-
-      if (response.status === 201) {
-        toast.success("Registration successfull",{ autoClose: 1500 });
-        setTimeout(() => {
-          navigate("/");
-        }, 1700);
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      if (error.response?.status === 400) {
-        toast.success("User already exists", { autoClose: 1500 });
-        setTimeout(() => {
-          navigate("/");
-        }, 1700);
-      } else {
-        toast.error("Something went wrong");
-      }
-    } finally {
+    // Registeration Failed
+    if (!response.success) {
+      toast.error(response.message);
       setLoading(false);
+      navigate("/login");
     }
+
+    // Registeration Success
+    toast.success("Registeration successful", { autoClose: 1000 });
+    navigate("/");
+
+    setLoading(false);
   };
 
   return (
@@ -112,16 +75,47 @@ const Register = () => {
         </h1>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+          noValidate
+        >
           {[
-            { label: "Full Name*", name: "name", type: "text", placeholder: "Enter your name" },
-            { label: "Email*", name: "email", type: "email", placeholder: "Enter your email" },
-            { label: "Contact*", name: "contact", type: "tel", placeholder: "Enter your phone number" },
-            { label: "Password*", name: "password", type: "password", placeholder: "Enter your password" },
-            { label: "Confirm Password*", name: "confirm_password", type: "password", placeholder: "Confirm your password" },
+            {
+              label: "Full Name*",
+              name: "name",
+              type: "text",
+              placeholder: "Enter your name",
+            },
+            {
+              label: "Email*",
+              name: "email",
+              type: "email",
+              placeholder: "Enter your email",
+            },
+            {
+              label: "Contact*",
+              name: "contact",
+              type: "tel",
+              placeholder: "Enter your phone number",
+            },
+            {
+              label: "Password*",
+              name: "password",
+              type: "password",
+              placeholder: "Enter your password",
+            },
+            {
+              label: "Confirm Password*",
+              name: "confirm_password",
+              type: "password",
+              placeholder: "Confirm your password",
+            },
           ].map((field) => (
             <div key={field.name} className="flex flex-col space-y-1">
-              <label htmlFor={field.name} className="text-gray-700">{field.label}</label>
+              <label htmlFor={field.name} className="text-gray-700">
+                {field.label}
+              </label>
               <input
                 type={field.type}
                 name={field.name}
@@ -131,7 +125,9 @@ const Register = () => {
                 onChange={handleChange}
                 className="w-full p-3 text-base text-gray-600 border border-gray-300 rounded-lg outline-none focus:border-black transition"
               />
-              {errors[field.name] && <p className="text-red-500 text-sm">{errors[field.name]}</p>}
+              {errors[field.name] && (
+                <p className="text-red-500 text-sm">{errors[field.name]}</p>
+              )}
             </div>
           ))}
 
@@ -151,14 +147,19 @@ const Register = () => {
         <div className="flex items-start gap-3 text-sm text-gray-700 mt-4">
           <input type="checkbox" required className="mt-1" />
           <p>
-            By continuing, I agree to the <span className="font-medium">Terms of Use</span> & <span className="font-medium">Privacy Policy</span>
+            By continuing, I agree to the{" "}
+            <span className="font-medium">Terms of Use</span> &{" "}
+            <span className="font-medium">Privacy Policy</span>
           </p>
         </div>
 
         {/* Already have account */}
         <p className="text-center text-gray-700 mt-4">
           Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-[#ff4141] hover:underline">
+          <Link
+            to="/login"
+            className="font-semibold text-[#ff4141] hover:underline"
+          >
             Login here
           </Link>
         </p>

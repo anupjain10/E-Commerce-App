@@ -3,19 +3,16 @@ import cart_icon from "../assets/cart_icon.png";
 import { useContext, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
-import { Logout } from "./Logout";
+import { Logout } from "../pages/Logout";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
   const [menu, setMenu] = useState("home");
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
 
   const { getTotalCartItem } = useContext(ShopContext);
   const location = useLocation();
-
-  const API_URL = import.meta.env.VITE_API_URL;
 
   // Sync menu with URL
   useEffect(() => {
@@ -25,27 +22,11 @@ const Navbar = () => {
     else if (location.pathname.includes("kid")) setMenu("kid");
   }, [location]);
 
-  // Auth check
-  const checkAuth = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/api/accounts/check_auth/`, {
-        withCredentials: true,
-      });
+  const { user, loading, checkAuth } = useAuth();
 
-      // console.log("Data", res.data);
-      // console.log("Response", res);
-
-      setUser(res.data.email);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    checkAuth();
-  }, [location]);
+  // useEffect(() => {
+  //   checkAuth();
+  // }, []);
 
   const menuItems = ["home", "men", "women", "kid"];
 
@@ -96,7 +77,7 @@ const Navbar = () => {
                   </Link>
                 </>
               ) : (
-                <Logout setUser={setUser} />
+                <Logout />
               )}
             </div>
           )}
@@ -125,7 +106,7 @@ const Navbar = () => {
           {menuItems.map((item) => (
             <Link
               key={item}
-              to={item === "home" ? "/" : `/${item}s`}
+              to={item === "home" ? "/" : `/${item}`}
               onClick={() => setIsOpen(false)}
               className="capitalize text-gray-700 hover:text-black"
             >
@@ -141,7 +122,7 @@ const Navbar = () => {
                   <Link to="/register">Register</Link>
                 </div>
               ) : (
-                <Logout setUser={setUser} />
+                <Logout />
               ))}
           </div>
         </div>

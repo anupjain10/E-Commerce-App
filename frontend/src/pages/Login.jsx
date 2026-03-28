@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginValidation } from "../utilis/Validation";
 import { toast } from "react-toastify";
-import axios from "axios";
-import checkAuth from "../components/Navbar";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
@@ -29,62 +29,34 @@ const Login = () => {
     }));
   };
 
-  const getCSRFToken = () => {
-    return document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("csrftoken="))
-      ?.split("=")[1];
-  };
-
-  const API_URL = import.meta.env.VITE_API_URL;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const validationErrors = loginValidation(formData);
+    setErrors({});
 
+    const validationErrors = loginValidation(formData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
 
-    try {
-      setLoading(true);
-      setErrors({});
+    setLoading(true);
 
-      // 1. Get CSRF cookie
-      await axios.get(`${API_URL}/api/accounts/csrf_cookie/`, {
-        withCredentials: true,
-      });
+    const response = await login(formData);
+    console.log("Response:", response);
 
-      const csrfToken = getCSRFToken();
-      if (!csrfToken) throw new Error("CSRF token missing");
-
-      // Login request
-      const response = await axios.post(
-        `${API_URL}/api/accounts/login/`,
-        formData,
-        {
-          withCredentials: true,
-          headers: {
-            "X-CSRFToken": csrfToken,
-          },
-        },
-      );
-      console.log("Response", response);
-      // Success
-      toast.success("Login successful", { autoClose: 1500 });
-      setTimeout(() => {
-          navigate("/");
-        }, 1700);
-    } catch (error) {
-      console.log("Login Error:", error);
-      const message =
-        error.response?.data?.message || "Something went wrong. Try again.";
-      toast.error(message);
-    } finally {
+    // Login Failed
+    if (!response.success) {
+      toast.error(response.message);
       setLoading(false);
+      return;
     }
+
+    // Login Success
+    toast.success("Login successful", { autoClose: 1000 });
+    navigate("/");
+
+    setLoading(false);
   };
 
   return (
